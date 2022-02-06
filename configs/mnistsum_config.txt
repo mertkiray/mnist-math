@@ -1,0 +1,14 @@
+expname = together_diffsumnist
+datadir = ./data/MNIST
+
+should_seed=True
+seed=3407
+
+lr=1e-3
+batch_size=64
+
+epoch=50
+
+model=resnet
+patience=5
+dataset_type=diffsumnist
