@@ -1,14 +1,15 @@
-expname = together_diffsumnist
+expname = sumnist_conv
 datadir = ./data/MNIST
 
 should_seed=True
 seed=3407
+
+dataset_type=sumnist
 
 lr=1e-3
 batch_size=64
 
 epoch=50
 
-model=resnet
-patience=5
-dataset_type=diffsumnist
+model=conv
+patience=10
