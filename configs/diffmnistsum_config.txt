@@ -1,0 +1,15 @@
+expname = diffsumnist_resnet
+datadir = ./data/MNIST
+
+should_seed=True
+seed=3407
+
+dataset_type=diffsumnist
+
+lr=1e-3
+batch_size=64
+
+epoch=50
+
+model=resnet
+patience=10

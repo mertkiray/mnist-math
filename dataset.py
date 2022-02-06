@@ -2,11 +2,11 @@ import os
 import random
 from typing import Tuple, Any
 
-import numpy as np
 import torch
 from PIL import Image
 import torchvision.datasets
-from torch.utils.data import DataLoader, random_split, SubsetRandomSampler
+from torch.utils.data import DataLoader
+
 
 class MNIST(torchvision.datasets.MNIST):
     def __init__(self, dataset_type='sumnist', *args, **kwargs):
@@ -22,6 +22,9 @@ class MNIST(torchvision.datasets.MNIST):
     def processed_folder(self) -> str:
         return os.path.join(self.root, 'processed')
 
+    # Limit data and labels for train and validation so they don't overlap.
+    # This is not necessary for normal MNIST but because we are selecting a random data in getitem we have to manually
+    # limit the data and labels.
     def set_indices(self, indices):
         self.data = self.data[indices]
         self.targets = self.targets[indices]
@@ -35,10 +38,11 @@ class MNIST(torchvision.datasets.MNIST):
             tuple: (image, image, target) where target is sum of the two target classes.
         """
 
+        # Get image and label as normal
         img, target = self.data[index], int(self.targets[index])
 
+        # This will select a random element from the dataset to be used as the pair image.
         random_index = random.randint(0, self.__len__() - 1)
-
         img2, target2 = self.data[random_index], int(self.targets[random_index])
 
         # doing this so that it is consistent with all other datasets
@@ -50,35 +54,35 @@ class MNIST(torchvision.datasets.MNIST):
             img = self.transform(img)
             img2 = self.transform(img2)
 
+        # I choose to concat the images to create a (2,28,28) image that will be fed into the network.
+        images = torch.cat((img, img2), dim=0)
+
         if self.target_transform is not None:
             target = self.target_transform(target)
             target2 = self.target_transform(target2)
 
-        images = torch.cat((img, img2), dim=0)
-
+        # If sumnist data is chosen, the label become label1 + label2.
+        # We do not have to introduce the operation concept there because only sum can be made.
         if self.dataset_type == 'sumnist':
             target_sum = target + target2
-            # print(f'target:{target}, target2:{target2}, target_sum:{target_sum}')
-
             return images, target_sum
 
+        # If diffsumnist is chosen, we have to introduce the operation concept.
+        # I choose to introduce a random variable, which will be diff if probability <= 0.5 and sum else
         elif self.dataset_type == 'diffsumnist':
             operation_prob = random.random()
-            #print(f'Operation prob: {operation_prob}')
-
             if operation_prob <= 0.5:
                 # operation is diff
-                #print(f'Operation is DIFF')
+                # The operation concept is given into the input directly. If the operation is diff, the third channel of
+                # the image will be all zeros.
                 images = torch.cat((images, torch.zeros(img.size())), dim=0)
                 target_diff = abs(target - target2)
-                #print(f'target:{target}, target2:{target2}, target_diff:{target_diff}')
                 return images, target_diff
             else:
                 # operation is sum
-                #print(f'Operation is SUM')
+                # If the operation is sum, the third channel of the image will be all ones.
                 images = torch.cat((images, torch.ones(img.size())), dim=0)
                 target_sum = target + target2
-                #print(f'target:{target}, target2:{target2}, target_sum:{target_sum}')
                 return images, target_sum
 
     def __len__(self) -> int:
@@ -86,7 +90,6 @@ class MNIST(torchvision.datasets.MNIST):
 
 
 def get_data_loaders(data_root, dataset_type, batch_size, transforms):
-    print('train loader')
     train_dataset = MNIST(root=data_root, dataset_type=dataset_type, train=True, download=True, transform=transforms,
                           target_transform=None)
     val_dataset = MNIST(root=data_root, dataset_type=dataset_type, train=True, download=True, transform=transforms,
@@ -95,21 +98,16 @@ def get_data_loaders(data_root, dataset_type, batch_size, transforms):
                          target_transform=None)
 
     dataset_size = len(train_dataset)
-    # dataset_size = 8
 
+    # Partition dataset train, val
     train_size = int(dataset_size * 0.8)
-    #train_size = 2
-
     indices = torch.randperm(dataset_size)
-
     train_indices = indices[:train_size]
     val_indices = indices[train_size:]
-
     train_dataset.set_indices(train_indices)
     val_dataset.set_indices(val_indices)
 
-
-    print(f'Dataset size: {dataset_size}, train size: {train_size}, valid size: {dataset_size-train_size},'
+    print(f'Dataset size: {dataset_size}, train size: {train_size}, valid size: {dataset_size - train_size},'
           f' test size: {len(test_dataset)}')
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,

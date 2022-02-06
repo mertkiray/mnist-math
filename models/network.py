@@ -38,6 +38,7 @@ class Resnet(nn.Module):
         super(Resnet, self).__init__()
         self.model = torchvision.models.resnet50(pretrained=False, num_classes=1)
 
+        # Resnet is built for RGB, change it, so it can be used for our input
         if dataset_type == 'sumnist':
             self.model.conv1 = torch.nn.Conv2d(2, 64, kernel_size=7, stride=2, padding=3, bias=False)
         elif dataset_type == 'diffsumnist':
