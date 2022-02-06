@@ -1,4 +1,4 @@
-expname = sumnist_conv
+expname = sumnist_resnet
 datadir = ./data/MNIST
 
 should_seed=True
@@ -11,5 +11,5 @@ batch_size=64
 
 epoch=50
 
-model=conv
+model=resnet
 patience=10
